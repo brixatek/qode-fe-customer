@@ -4,7 +4,6 @@ A comprehensive customer onboarding and KYC management platform built with React
 
 ## Features
 
-### Customer Portal
 - **Landing Page**: Modern hero section with features showcase and fixed navigation header
 - **Multi-step Registration**: 3-step onboarding wizard with progress tracking
 - **Email Verification**: Email verification flow with resend capability
@@ -14,13 +13,6 @@ A comprehensive customer onboarding and KYC management platform built with React
 - **KYC Document Management**: Upload, view, download, and delete documents with status tracking
 - **Document Status Tracking**: Pending, Approved, and Rejected status indicators
 - **Dark/Light Mode**: Theme toggle with persistent preferences
-
-### Admin Backoffice
-- **Admin Login**: Separate authentication for administrators
-- **Dashboard Metrics**: Overview of customer statistics and KYC reviews
-- **Customer Management**: View and manage customer summaries
-- **KYC Review Queue**: Review pending documents and approve/reject submissions
-- **Sender ID Management**: Manage sender IDs for messaging services
 
 ## API Endpoints Integrated
 
@@ -36,12 +28,6 @@ A comprehensive customer onboarding and KYC management platform built with React
 - `GET /api/v1/kyc-documents/customer/{customerId}` - Get customer documents
 - `GET /api/v1/kyc-documents/{id}/download` - Download document
 - `DELETE /api/v1/kyc-documents/{id}` - Delete document
-
-### Admin/Backoffice
-- `POST /api/v1/backoffice/auth/login` - Admin login
-- `GET /api/v1/metrics/dashboard` - Dashboard metrics
-- `GET /api/v1/backoffice/customer-summaries` - Customer summaries
-- `GET /api/v1/backoffice/pending-reviews` - Pending KYC reviews
 
 ### Reference Data
 - `GET /api/v1/countries` - Get countries list
@@ -81,11 +67,6 @@ src/
 │   ├── EmailVerification.tsx/css    # Email verification flow
 │   ├── Dashboard.tsx/css            # Customer dashboard & profile
 │   ├── KycDocuments.tsx/css         # KYC document management
-│   ├── AdminApp.tsx                 # Admin application wrapper
-│   ├── AdminLogin.tsx/css           # Admin authentication
-│   ├── AdminDashboard.tsx/css       # Admin backoffice dashboard
-│   ├── SenderIdList.tsx             # Sender ID management
-│   ├── WalletModal.tsx/css          # Wallet management modal
 │   ├── Logo.tsx/css                 # Reusable logo component
 │   └── ErrorBoundary.tsx            # Error handling wrapper
 ├── services/
@@ -116,13 +97,6 @@ src/
 5. **Document Review**: Wait for admin approval of documents
 6. **Unlock Profile**: Unlock becomes available after document approval
 7. **Manage Documents**: View, download, or delete non-approved documents
-
-### Admin Workflow
-1. **Admin Login**: Authenticate with admin credentials
-2. **View Dashboard**: See metrics and pending reviews
-3. **Review KYC Documents**: Approve or reject customer documents
-4. **Manage Customers**: View customer summaries and details
-5. **Manage Sender IDs**: Configure messaging sender IDs
 
 ## Key Features Implementation
 
