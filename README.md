@@ -1,18 +1,26 @@
-# Qode Customer Onboarding Frontend
+# Qode Customer Onboarding Platform
 
-A beautiful and interactive customer onboarding frontend built with React and TypeScript, featuring a multi-step registration wizard with modern UI/UX design.
+A comprehensive customer onboarding and KYC management platform built with React and TypeScript. Features a modern landing page, multi-step registration wizard, customer dashboard with profile management, KYC document handling, and admin backoffice system.
 
 ## Features
 
-- **Multi-step Registration Wizard**: 3-step onboarding process with progress tracking
-- **Beautiful UI**: Modern design with Poppins font and gradient backgrounds
-- **Form Validation**: Real-time validation with error handling
-- **Responsive Design**: Mobile-friendly interface
-- **API Integration**: Connected to Qode onboarding API endpoints
-- **Email Verification**: Built-in email verification flow
-- **Login System**: Secure authentication system
-- **KYC Document Management**: Upload, view, and manage KYC documents
-- **Admin Dashboard**: Complete backoffice management system
+### Customer Portal
+- **Landing Page**: Modern hero section with features showcase and fixed navigation header
+- **Multi-step Registration**: 3-step onboarding wizard with progress tracking
+- **Email Verification**: Email verification flow with resend capability
+- **Customer Login**: Secure authentication system
+- **Customer Dashboard**: Complete profile management with editable fields
+- **Profile Lock/Unlock**: Lock profile after document submission, unlock after approval
+- **KYC Document Management**: Upload, view, download, and delete documents with status tracking
+- **Document Status Tracking**: Pending, Approved, and Rejected status indicators
+- **Dark/Light Mode**: Theme toggle with persistent preferences
+
+### Admin Backoffice
+- **Admin Login**: Separate authentication for administrators
+- **Dashboard Metrics**: Overview of customer statistics and KYC reviews
+- **Customer Management**: View and manage customer summaries
+- **KYC Review Queue**: Review pending documents and approve/reject submissions
+- **Sender ID Management**: Manage sender IDs for messaging services
 
 ## API Endpoints Integrated
 
@@ -66,60 +74,71 @@ npm start
 
 ```
 src/
-├── components/          # React components
-│   ├── OnboardingForm.tsx
-│   ├── OnboardingForm.css
-│   ├── LoginForm.tsx
-│   ├── LoginForm.css
-│   ├── EmailVerification.tsx
-│   └── EmailVerification.css
-├── services/           # API service layer
-│   └── api.ts
-├── types/             # TypeScript type definitions
-│   └── api.ts
-├── App.tsx            # Main application component
-├── App.css
-├── index.tsx          # Application entry point
-└── index.css          # Global styles
+├── components/
+│   ├── LandingPage.tsx/css          # Landing page with hero section
+│   ├── OnboardingForm.tsx/css       # Multi-step registration wizard
+│   ├── LoginForm.tsx/css            # Customer login
+│   ├── EmailVerification.tsx/css    # Email verification flow
+│   ├── Dashboard.tsx/css            # Customer dashboard & profile
+│   ├── KycDocuments.tsx/css         # KYC document management
+│   ├── AdminApp.tsx                 # Admin application wrapper
+│   ├── AdminLogin.tsx/css           # Admin authentication
+│   ├── AdminDashboard.tsx/css       # Admin backoffice dashboard
+│   ├── SenderIdList.tsx             # Sender ID management
+│   ├── WalletModal.tsx/css          # Wallet management modal
+│   ├── Logo.tsx/css                 # Reusable logo component
+│   └── ErrorBoundary.tsx            # Error handling wrapper
+├── services/
+│   └── api.ts                       # API service layer
+├── types/
+│   └── api.ts                       # TypeScript type definitions
+├── App.tsx                          # Main application router
+├── App.css                          # Global application styles
+├── index.tsx                        # Application entry point
+└── index.css                        # Global CSS variables & styles
 ```
 
-## Registration Flow
+## User Flows
 
-1. **Step 1: Personal Information**
-   - First Name, Last Name
-   - Email Address
-   - Password
+### Customer Registration & Onboarding
+1. **Landing Page**: View features and navigate to registration
+2. **Step 1 - Personal Info**: First name, last name, email, password
+3. **Step 2 - Company & Contact**: Company name, country, phone number
+4. **Step 3 - Business Details**: Role, sector, company size, referral source
+5. **Email Verification**: Verify email address via verification link
+6. **Dashboard Access**: Access customer dashboard after verification
 
-2. **Step 2: Company & Contact**
-   - Company Name
-   - Country Selection
-   - Phone Code & Mobile Number
+### Profile & KYC Management
+1. **View Profile**: See personal and company information
+2. **Edit Profile**: Update editable fields (company website, size, etc.)
+3. **Upload Documents**: Upload required KYC documents (passport, ID, business registration, etc.)
+4. **Lock Profile**: Lock profile after document submission
+5. **Document Review**: Wait for admin approval of documents
+6. **Unlock Profile**: Unlock becomes available after document approval
+7. **Manage Documents**: View, download, or delete non-approved documents
 
-3. **Step 3: Business Details**
-   - Role Selection
-   - Business Sector
-   - Referral Source
-   - Privacy Policy Acceptance
+### Admin Workflow
+1. **Admin Login**: Authenticate with admin credentials
+2. **View Dashboard**: See metrics and pending reviews
+3. **Review KYC Documents**: Approve or reject customer documents
+4. **Manage Customers**: View customer summaries and details
+5. **Manage Sender IDs**: Configure messaging sender IDs
 
-4. **Step 4: Success & Email Verification**
-   - Registration confirmation
-   - Email verification prompt
+## Key Features Implementation
 
-## Features
-
-- **Interactive Progress Bar**: Visual progress tracking through registration steps
-- **Real-time Validation**: Immediate feedback on form inputs
-- **Responsive Design**: Optimized for desktop and mobile devices
-- **Loading States**: User feedback during API calls
-- **Error Handling**: Comprehensive error messages and recovery options
-- **Modern Animations**: Smooth transitions and hover effects
+- **Conditional Actions**: Delete button only shows for non-approved documents
+- **Icon-based UI**: Eye icon for view, trash icon for delete
+- **Profile Locking**: Unlock button disabled until documents are approved
+- **Status Indicators**: Color-coded badges for document status (Pending/Approved/Rejected)
+- **Theme Support**: Dark/light mode with CSS variables
+- **Responsive Tables**: Mobile-friendly data tables with pagination
+- **File Upload**: Drag-and-drop document upload with file type validation
+- **Real-time Validation**: Form validation with immediate feedback
+- **Error Handling**: Comprehensive error messages and recovery
 
 ## API Configuration
 
-The application connects to the Qode onboarding API at:
-```
-Base URL: https://onboarding.zephapay.com/api/v1
-```
+Base URL: `https://onboarding.zephapay.com/api/v1`
 
 ## Build for Production
 
@@ -127,4 +146,4 @@ Base URL: https://onboarding.zephapay.com/api/v1
 npm run build
 ```
 
-This builds the app for production to the `build` folder.
+Builds the app for production to the `build` folder.
