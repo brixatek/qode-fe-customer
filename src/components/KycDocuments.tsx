@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { kycService } from '../services/kycApi.ts';
 import { dashboardService } from '../services/api.ts';
-import { KycDocument, DocumentType } from '../types/kyc';
+import { KycDocument, DocumentType, DocumentHistory } from '../types/kyc';
 import './KycDocuments.css';
 
 const KycDocuments: React.FC = () => {
@@ -20,6 +20,11 @@ const KycDocuments: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [deleteConfirm, setDeleteConfirm] = useState<{show: boolean, docId: string, docName: string}>({show: false, docId: '', docName: ''});
+  const [showUpdateModal, setShowUpdateModal] = useState<{show: boolean, docId: string, docTypeId: string, docName: string} | null>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState<{show: boolean, docId: string, docName: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [documentHistory, setDocumentHistory] = useState<DocumentHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -35,6 +40,7 @@ const KycDocuments: React.FC = () => {
       
       const userId = userResponse.data.data.id;
       setCustomerId(userId);
+      setCurrentUser(userResponse.data.data);
       
       console.log('Document types response:', typesResponse);
       const types = typesResponse.data?.data?.data || [];
@@ -60,12 +66,41 @@ const KycDocuments: React.FC = () => {
     setUploading(true);
     try {
       await kycService.uploadDocument({ file, documentTypeId });
+      addToHistory(documentTypeId, 'upload', file.name);
       await loadDocuments();
     } catch (error) {
       console.error('Upload failed:', error);
       alert('Upload failed. Please try again.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const addToHistory = (docId: string, action: 'upload' | 'update' | 'delete', fileName: string) => {
+    const historyEntry: DocumentHistory = {
+      id: Date.now().toString(),
+      documentId: docId,
+      action,
+      fileName,
+      performedBy: currentUser?.email || 'Unknown',
+      performedAt: new Date().toISOString(),
+    };
+    const existingHistory = JSON.parse(localStorage.getItem('documentHistory') || '[]');
+    existingHistory.unshift(historyEntry);
+    localStorage.setItem('documentHistory', JSON.stringify(existingHistory));
+  };
+
+  const loadHistory = (docId: string) => {
+    setLoadingHistory(true);
+    try {
+      const allHistory = JSON.parse(localStorage.getItem('documentHistory') || '[]');
+      const filtered = allHistory.filter((h: DocumentHistory) => h.documentId === docId);
+      setDocumentHistory(filtered);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+      setDocumentHistory([]);
+    } finally {
+      setLoadingHistory(false);
     }
   };
 
@@ -167,7 +202,9 @@ const KycDocuments: React.FC = () => {
 
   const confirmDelete = async () => {
     try {
+      const doc = documents.find(d => d.id === deleteConfirm.docId);
       await kycService.deleteDocument(deleteConfirm.docId);
+      if (doc) addToHistory(doc.documentTypeId, 'delete', doc.fileName);
       await loadDocuments();
       setDeleteConfirm({show: false, docId: '', docName: ''});
     } catch (error) {
@@ -284,16 +321,18 @@ const KycDocuments: React.FC = () => {
           <div className="table-container">
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '20%' }} />
-              <col style={{ width: '23%' }} />
-              <col style={{ width: '22%' }} />
+              <col style={{ width: '18%' }} />
               <col style={{ width: '15%' }} />
+              <col style={{ width: '18%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '19%' }} />
             </colgroup>
             <thead>
               <tr className="table-header-row">
                 <th className="table-header-cell">Type</th>
                 <th className="table-header-cell text-center">Status</th>
+                <th className="table-header-cell">Uploaded By</th>
                 <th className="table-header-cell">Upload Date</th>
                 <th className="table-header-cell">Review Date</th>
                 <th className="table-header-cell text-center">Actions</th>
@@ -344,22 +383,17 @@ const KycDocuments: React.FC = () => {
                       </span>
                     </td>
                     <td className="table-cell">
+                      <div className="date-primary">{currentUser?.email || 'N/A'}</div>
+                    </td>
+                    <td className="table-cell">
                       {doc.createdAt ? (
-                        <>
-                          <div className="date-primary">
-                            {new Date(doc.createdAt).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric', 
-                              year: 'numeric'
-                            })}
-                          </div>
-                          <div className="date-secondary">
-                            {new Date(doc.createdAt).toLocaleTimeString('en-US', { 
-                              hour: '2-digit', 
-                              minute: '2-digit'
-                            })}
-                          </div>
-                        </>
+                        <div className="date-primary">
+                          {new Date(doc.createdAt).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric'
+                          })}
+                        </div>
                       ) : 'N/A'}
                     </td>
                     <td className="table-cell">
@@ -374,15 +408,47 @@ const KycDocuments: React.FC = () => {
                       ) : '-'}
                     </td>
                     <td className="table-cell text-center">
-                      <button 
-                        onClick={() => handleView(doc.id, doc.fileName)}
-                        title="View"
-                        style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#dbeafe', color: '#1d4ed8', margin: '0 auto' }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                        </svg>
-                      </button>
+                      <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
+                        <button 
+                          onClick={() => handleView(doc.id, doc.fileName)}
+                          title="View"
+                          style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#dbeafe', color: '#1d4ed8' }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => setShowUpdateModal({show: true, docId: doc.id, docTypeId: doc.documentTypeId, docName: docType?.name || 'Document'})}
+                          title="Update"
+                          style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fef3c7', color: '#d97706' }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(doc.id, docType?.name || 'Document')}
+                          title="Delete"
+                          style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#dc2626' }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => {
+                            loadHistory(doc.documentTypeId);
+                            setShowHistoryModal({show: true, docId: doc.id, docName: docType?.name || 'Document'});
+                          }}
+                          title="History"
+                          style={{ width: '28px', height: '28px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4f46e5' }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -391,7 +457,7 @@ const KycDocuments: React.FC = () => {
             {filteredDocuments.length > 0 && (
               <tfoot>
                 <tr>
-                  <td colSpan={5} className="pagination-cell">
+                  <td colSpan={6} className="pagination-cell">
                     <div className="pagination-container">
                       <button 
                         className="btn btn-secondary btn-sm"
@@ -611,6 +677,118 @@ const KycDocuments: React.FC = () => {
         </div>
       )}
       
+      {showUpdateModal && (
+        <div className="upload-modal">
+          <div className="modal-backdrop" onClick={() => setShowUpdateModal(null)}></div>
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3>Update Document</h3>
+              <button className="close-btn" onClick={() => setShowUpdateModal(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <p className="upload-description">Upload a new file to replace the existing {showUpdateModal.docName}</p>
+              <div className="upload-card">
+                <div className="upload-area">
+                  <input
+                    type="file"
+                    id="update-file"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file && showUpdateModal) {
+                        setUploading(true);
+                        try {
+                          const oldDoc = documents.find(d => d.id === showUpdateModal.docId);
+                          await kycService.deleteDocument(showUpdateModal.docId);
+                          await kycService.uploadDocument({ file, documentTypeId: showUpdateModal.docTypeId });
+                          if (oldDoc) addToHistory(showUpdateModal.docTypeId, 'update', file.name);
+                          await loadDocuments();
+                          setShowUpdateModal(null);
+                        } catch (error) {
+                          console.error('Update failed:', error);
+                          alert('Update failed. Please try again.');
+                        } finally {
+                          setUploading(false);
+                        }
+                      }
+                    }}
+                    disabled={uploading}
+                    className="file-input"
+                  />
+                  <label htmlFor="update-file" className="upload-label">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                    </svg>
+                    {uploading ? 'Uploading...' : 'Choose New File'}
+                  </label>
+                  <p className="upload-hint">PDF, JPG, PNG, DOC, DOCX (Max 10MB)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showHistoryModal && (
+        <div className="modal-overlay" onClick={() => setShowHistoryModal(null)}>
+          <div className="create-wallet-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Document History - {showHistoryModal.docName}</h2>
+              <button className="modal-close" onClick={() => setShowHistoryModal(null)}>×</button>
+            </div>
+            <div className="modal-content" style={{ overflowY: 'auto', flex: 1 }}>
+              {loadingHistory ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <div className="spinner"></div>
+                  <p>Loading history...</p>
+                </div>
+              ) : documentHistory.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📜</div>
+                  <h4>No History Available</h4>
+                  <p>No upload, update, or deletion history found for this document</p>
+                </div>
+              ) : (
+                <div style={{ position: 'relative', paddingLeft: '40px' }}>
+                  <div style={{ position: 'absolute', left: '20px', top: '0', bottom: '0', width: '2px', background: 'var(--border-color, #e5e7eb)' }}></div>
+                  {documentHistory.map((history, index) => (
+                    <div key={history.id} style={{ position: 'relative', paddingBottom: index === documentHistory.length - 1 ? '0' : '24px' }}>
+                      <div style={{ position: 'absolute', left: '-28px', top: '4px', width: '16px', height: '16px', borderRadius: '50%', background: history.action === 'upload' ? '#10b981' : history.action === 'update' ? '#f59e0b' : '#ef4444', border: '3px solid var(--modal-bg, white)' }}></div>
+                      <div className="doc-info-box" style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span className={`transaction-badge ${
+                            history.action === 'upload' ? 'credit' : 'debit'
+                          }`}>
+                            {history.action === 'upload' ? '📤 Upload' : 
+                             history.action === 'update' ? '🔄 Update' : 
+                             '🗑️ Delete'}
+                          </span>
+                          <span className="date-secondary">
+                            {new Date(history.performedAt).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric'
+                            })} at {new Date(history.performedAt).toLocaleTimeString('en-US', { 
+                              hour: '2-digit', 
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        <div className="doc-info-value" style={{ marginBottom: '4px', wordBreak: 'break-word' }}>{history.fileName}</div>
+                        <div className="doc-info-label">by {history.performedBy}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-primary" onClick={() => setShowHistoryModal(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteConfirm.show && (
         <div className="delete-modal">
           <div className="modal-backdrop" onClick={() => setDeleteConfirm({show: false, docId: '', docName: ''})}></div>

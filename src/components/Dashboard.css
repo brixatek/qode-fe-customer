@@ -3595,3 +3595,9 @@ textarea.form-input {
   background: #1e293b;
   border-color: #334155;
 }
+
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}

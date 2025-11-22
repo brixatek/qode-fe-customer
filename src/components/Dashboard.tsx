@@ -668,6 +668,7 @@ const Dashboard: React.FC = () => {
   const [viewingDocument, setViewingDocument] = useState<{url: string, name: string} | null>(null);
   const [deleteDocumentConfirm, setDeleteDocumentConfirm] = useState<{show: boolean, docId: string, docName: string}>({show: false, docId: '', docName: ''});
   const REQUIRED_DOCUMENTS = 3; // Set the required number of documents
+  const [showWelcomeGuide, setShowWelcomeGuide] = useState(false);
 
   useEffect(() => {
     if (!tokenManager.isAuthenticated()) {
@@ -676,14 +677,24 @@ const Dashboard: React.FC = () => {
     }
     loadDashboardData();
     checkProfileLockStatus();
-    checkAndLockProfile();
   }, []);
 
   useEffect(() => {
-    if (user?.id) {
-      checkAndLockProfile();
+    // Load KYC documents and check if welcome guide should show
+    if (user?.id && !loading) {
+      loadKycDocuments().then(() => {
+        // Show welcome guide if profile is incomplete or no documents
+        if (!profileLocked) {
+          const isProfileIncomplete = !user.interest || !user.sendingFrequency || !user.sendingVolume || !user.sendingType;
+          if (isProfileIncomplete) {
+            setTimeout(() => setShowWelcomeGuide(true), 1000);
+          }
+        }
+      });
     }
-  }, [user?.id]);
+  }, [user?.id, loading, profileLocked]);
+
+
 
   const checkProfileLockStatus = () => {
     const locked = localStorage.getItem('profileLocked');
@@ -692,25 +703,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const checkAndLockProfile = async () => {
-    if (!user?.id) return;
-    try {
-      const kycService = await import('../services/kycApi.ts');
-      const response = await kycService.kycService.getCustomerDocuments(user.id);
-      const docs = response.data?.data || response.data || [];
-      const docsArray = Array.isArray(docs) ? docs : [];
-      
-      if (docsArray.length > 0) {
-        const allApproved = docsArray.every((doc: any) => doc.status === 1);
-        if (allApproved && !profileLocked) {
-          setProfileLocked(true);
-          localStorage.setItem('profileLocked', 'true');
-        }
-      }
-    } catch (error) {
-      console.error('Failed to check KYC documents:', error);
-    }
-  };
+
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
@@ -860,6 +853,7 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Logout failed:', error);
     } finally {
+      localStorage.clear();
       window.location.href = '/?login=true';
     }
   };
@@ -3130,6 +3124,53 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className={`dashboard ${isDarkMode ? 'dark' : 'light'}`}>
+      {showWelcomeGuide && (
+        <div className="modal-overlay" style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(4px)', zIndex: 9999 }} onClick={() => setShowWelcomeGuide(false)}>
+          <div className="create-wallet-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px', width: '90%' }}>
+            <div className="modal-header" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '32px 24px', position: 'relative' }}>
+              <button onClick={() => setShowWelcomeGuide(false)} style={{ position: 'absolute', top: '16px', right: '16px', width: '32px', height: '32px', borderRadius: '50%', border: 'none', background: 'rgba(255, 255, 255, 0.2)', color: 'white', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '64px', marginBottom: '16px' }}>👋</div>
+                <h2 className="modal-title" style={{ color: 'white', margin: '0 0 8px 0', fontSize: '28px' }}>Welcome to Qode SMS!</h2>
+                <p style={{ margin: '0', fontSize: '14px', opacity: '0.9' }}>Complete your onboarding to start sending SMS</p>
+              </div>
+            </div>
+            <div className="modal-content" style={{ padding: '32px 24px' }}>
+              <div style={{ background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)', padding: '24px', borderRadius: '12px', border: '2px solid rgba(102, 126, 234, 0.2)', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                  <div style={{ fontSize: '32px', flexShrink: 0 }}>📋</div>
+                  <div>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: 'var(--table-text-primary)' }}>Complete Your Profile</h3>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--table-text-secondary)', lineHeight: '1.6' }}>Go to your <strong>Profile</strong> section and fill in all required fields including SMS preferences.</p>
+                  </div>
+                </div>
+              </div>
+              <div style={{ background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)', padding: '24px', borderRadius: '12px', border: '2px solid rgba(102, 126, 234, 0.2)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                  <div style={{ fontSize: '32px', flexShrink: 0 }}>📄</div>
+                  <div>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: 'var(--table-text-primary)' }}>Upload KYC Documents</h3>
+                    <p style={{ margin: '0', fontSize: '14px', color: 'var(--table-text-secondary)', lineHeight: '1.6' }}>Upload required verification documents. Once approved, you can finalize and lock your profile to start sending SMS.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-actions" style={{ padding: '20px 24px', borderTop: '1px solid var(--table-border)' }}>
+              <button 
+                onClick={() => { 
+                  setShowWelcomeGuide(false);
+                  setActiveSection('profile');
+                }}
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '14px', fontSize: '15px', fontWeight: '600' }}
+              >
+                Go to Profile →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <button className="mobile-menu-toggle" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>

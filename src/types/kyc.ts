@@ -21,3 +21,14 @@ export interface KycUploadRequest {
   file: File;
   documentTypeId: string;
 }
+
+
+export interface DocumentHistory {
+  id: string;
+  documentId: string;
+  action: 'upload' | 'update' | 'delete';
+  fileName: string;
+  performedBy: string;
+  performedAt: string;
+  status?: string;
+}

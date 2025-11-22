@@ -1447,3 +1447,11 @@
   background: #475569;
   color: #e2e8f0;
 }
+
+
+/* Dark Mode Variables */
+[data-theme="dark"] {
+  --modal-bg: #1e293b;
+  --border-color: #334155;
+  --card-bg: #0f172a;
+}
